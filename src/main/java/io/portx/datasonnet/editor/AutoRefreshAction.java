@@ -4,6 +4,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.ToggleAction;
 import com.intellij.openapi.util.IconLoader;
+import io.portx.datasonnet.config.DataSonnetProjectSettings;
 import io.portx.datasonnet.config.DataSonnetProjectSettingsComponent;
 import org.jetbrains.annotations.NotNull;
 
@@ -12,21 +13,22 @@ import javax.swing.*;
 /**
  * Created by eberman on 4/22/17.
  */
-public class AutoSyncAction extends ToggleAction {
+public class AutoRefreshAction extends ToggleAction {
     DataSonnetEditor editor;
 
-    final static Icon autosyncIcon = IconLoader.findIcon("/icons/autosync.png", AutoSyncAction.class);
+    final static Icon autosyncIcon = IconLoader.findIcon("/icons/autosync.png", AutoRefreshAction.class);
 
-    public AutoSyncAction(DataSonnetEditor editor) {
+    public AutoRefreshAction(DataSonnetEditor editor) {
         super("Auto Refresh", "Toggle Auto Refresh Mapping On/Off", autosyncIcon);
         this.editor = editor;
 
-        boolean autoSync = false;
-        final DataSonnetProjectSettingsComponent projectSettings = editor.getProject().getService(DataSonnetProjectSettingsComponent.class);
-        if (projectSettings != null && projectSettings.getState() != null) {
-            autoSync = projectSettings.getState().getAutoRefresh();
+        boolean autoRefresh = false;
+        final DataSonnetProjectSettings settings = DataSonnetProjectSettingsComponent.getSettings(editor.getProject());
+        if (settings != null) {
+            autoRefresh = settings.getAutoRefresh();
         }
-        setSelected(null, autoSync);
+
+        setSelected(null, autoRefresh);
     }
 
     @Override

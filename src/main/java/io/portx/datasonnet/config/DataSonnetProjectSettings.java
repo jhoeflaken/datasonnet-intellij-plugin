@@ -18,6 +18,7 @@ public class DataSonnetProjectSettings implements Serializable {
             default null
             */
             
+            {}
             """;
 
     private List<String> dataSonnetLibraryPaths;
