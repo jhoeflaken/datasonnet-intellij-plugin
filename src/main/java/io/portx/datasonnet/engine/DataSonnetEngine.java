@@ -8,17 +8,13 @@ import com.datasonnet.document.Document;
 import com.datasonnet.document.MediaType;
 import com.datasonnet.document.MediaTypes;
 import com.datasonnet.spi.Library;
-import com.intellij.codeInspection.AbstractDependencyVisitor;
-import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.roots.ContentIterator;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.vfs.*;
-import com.intellij.psi.PsiFile;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import io.github.classgraph.ClassGraph;
@@ -66,17 +62,7 @@ public class DataSonnetEngine {
 
     public com.datasonnet.document.Document runDataSonnetMapping() {
         com.intellij.openapi.editor.Document document = ApplicationManager.getApplication().runReadAction((Computable<com.intellij.openapi.editor.Document>) () -> FileDocumentManager.getInstance().getDocument(mappingFile));
-        String mappingScript = document.getText();
-
-
-        // TODO: The camel functions should be added AFTER the header and maybe even imports.
-        // TODO: Add proper support for adding exchange headers and properties. Currently, it's just a placeholder which returns nothing.
-        // TODO: Add support for different mimetypes in the exchangeProperty function
-        String camelFunctions = "local cml = { exchangeProperty(str): exchangeProperty[str], header(str): header[str], properties(str): properties[str] };\n";
-        String dataSonnetScript = camelFunctions + mappingScript;
-
-
-
+        String dataSonnetScript = document.getText();
         String payload = "{}";
 
         Map<String, VirtualFile> inputFiles = scenario.getInputFiles();
@@ -132,7 +118,7 @@ public class DataSonnetEngine {
             Mapper mapper = builder.build();
             if (isDebug) {
                 getDebugger().attach();
-                String[] lines = mappingScript.trim().split("\n|\r|\r\n");
+                String[] lines = dataSonnetScript.trim().split("\n|\r|\r\n");
                 getDebugger().setLineCount(lines.length);
             }
             com.datasonnet.document.Document transformDoc = mapper.transform(new DefaultDocument<>(payload, payloadMimeType), variables, outputMimeType);
