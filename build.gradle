@@ -46,7 +46,7 @@ dependencies {
 
 gitVersioning {
     branch {
-        pattern = 'master'
+        pattern = 'main'
         versionFormat = '${version}'
     }
     branch {
