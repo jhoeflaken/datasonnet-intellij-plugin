@@ -2,8 +2,6 @@ package io.portx.datasonnet.config;
 
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
-import com.intellij.openapi.ui.TextComponentAccessor;
-import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.*;
 import com.intellij.ui.components.JBList;
@@ -11,36 +9,48 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
 
 public class DataSonnetSettingsPanel {
     private JPanel myWholePanel;
-    private JPanel myProjectSettingsPanel;
-    private JBList myDataSonnetPathList;
+    private JPanel pnlProjectSettings;
+    private JBList<String> pathList;
     private JPanel mySearchPathPanel;
 
-    private DataSonnetProjectSettingsComponent myProjectSettingsComponent;
+    private JPanel pnlTemplate;
+    private JPanel pnlAutoSync;
+    private JCheckBox chkAutoRefresh;
+    private JTextArea txtTemplate;
 
-    private CollectionListModel<String> myDataSonnetPathsModel;
+    private DataSonnetProjectSettingsComponent projectSettings;
 
-    public JComponent createPanel(@NotNull DataSonnetProjectSettingsComponent projectSettingsComponent) {
-        myProjectSettingsComponent = projectSettingsComponent;
-        myProjectSettingsPanel.setBorder(IdeBorderFactory.createTitledBorder("Project settings"));
+    private CollectionListModel<String> pathsModel;
 
-        myDataSonnetPathsModel = new CollectionListModel<String>();
-        myDataSonnetPathList = new JBList(myDataSonnetPathsModel);
-        myDataSonnetPathList.getEmptyText().setText("No additional DataSonnet paths");
-        myDataSonnetPathList.setCellRenderer(new ColoredListCellRenderer() {
+    /**
+     * Create the DataSonnet project settings panel.
+     *
+     * @param theProjectSettings The project settings component which contains the current settings and is used
+     *                           to apply and store new settings.
+     */
+    public JComponent createPanel(@NotNull DataSonnetProjectSettingsComponent theProjectSettings) {
+        projectSettings = theProjectSettings;
+
+        pnlProjectSettings.setBorder(IdeBorderFactory.createTitledBorder("Project Settings"));
+
+        pathsModel = new CollectionListModel<>();
+        pathList = new JBList<>();
+        pathList.setModel(pathsModel);
+        pathList.getEmptyText().setText("No additional DataSonnet library paths");
+        pathList.setCellRenderer(new ColoredListCellRenderer() {
             @Override
             protected void customizeCellRenderer(@NotNull JList list, Object value, int index, boolean selected, boolean hasFocus) {
                 append(value.toString(), SimpleTextAttributes.REGULAR_ATTRIBUTES);
             }
         });
 
-        ToolbarDecorator toolbarDecorator = ToolbarDecorator.createDecorator(myDataSonnetPathList);
+        ToolbarDecorator toolbarDecorator = ToolbarDecorator.createDecorator(pathList);
 
         toolbarDecorator.setAddAction(new AnActionButtonRunnable() {
             @Override
@@ -48,7 +58,7 @@ public class DataSonnetSettingsPanel {
                 FileChooserDescriptor fileChooserDescriptor = new FileChooserDescriptor(false, true, false, false, false, false);
                 final @NotNull VirtualFile dir = FileChooser.chooseFile(fileChooserDescriptor, null, null);
                 if (dir != null) {
-                    myDataSonnetPathsModel.add(dir.getCanonicalPath());
+                    pathsModel.add(dir.getCanonicalPath());
                 }
             }
         });
@@ -58,19 +68,46 @@ public class DataSonnetSettingsPanel {
         return myWholePanel;
     }
 
+    /**
+     * Check if the settings have been modified.
+     *
+     * @return Whether the settings have been modified.
+     */
     public boolean isModified() {
-        return !Objects.equals(myDataSonnetPathsModel.getItems(), myProjectSettingsComponent.getState().getDataSonnetLibraryPaths());
+        final DataSonnetProjectSettings state = projectSettings.getState();
+        if (state == null) {
+            return false;
+        }
 
+        return chkAutoRefresh.isSelected() != state.getAutoRefresh() ||
+                !Objects.equals(txtTemplate.getText(), state.getDefaultTemplate()) ||
+                !Objects.equals(pathsModel.getItems(), state.getDataSonnetLibraryPaths());
     }
 
+    /**
+     * Apply the settings to the project.
+     */
     public void apply() {
-        java.util.List<String> dataSonnetPaths = new ArrayList<String>();
-        dataSonnetPaths.addAll(myDataSonnetPathsModel.getItems());
-        myProjectSettingsComponent.getState().setDataSonnetLibraryPaths(dataSonnetPaths);
+        final DataSonnetProjectSettings state = projectSettings.getState();
+        if (state != null) {
+            state.setAutoRefresh(chkAutoRefresh.isSelected());
+            state.setDefaultTemplate(txtTemplate.getText());
+
+            final java.util.List<String> dataSonnetPaths = new ArrayList<>(pathsModel.getItems());
+            state.setDataSonnetLibraryPaths(dataSonnetPaths);
+        }
     }
 
+    /**
+     * Reset the settings to the last applied settings.
+     */
     public void reset() {
-        myDataSonnetPathsModel.replaceAll(myProjectSettingsComponent.getState().getDataSonnetLibraryPaths());
+        final DataSonnetProjectSettings state = projectSettings.getState();
+        if (state != null) {
+            chkAutoRefresh.setSelected(state.getAutoRefresh());
+            txtTemplate.setText(state.getDefaultTemplate());
+            pathsModel.replaceAll(state.getDataSonnetLibraryPaths());
+        }
     }
 
     public Color getDefaultValueColor() {

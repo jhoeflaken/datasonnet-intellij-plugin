@@ -8,17 +8,14 @@ import com.datasonnet.document.Document;
 import com.datasonnet.document.MediaType;
 import com.datasonnet.document.MediaTypes;
 import com.datasonnet.spi.Library;
-import com.intellij.codeInspection.AbstractDependencyVisitor;
-import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.roots.ContentIterator;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.vfs.*;
-import com.intellij.psi.PsiFile;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import io.github.classgraph.ClassGraph;
@@ -35,6 +32,8 @@ import java.util.*;
 
 public class DataSonnetEngine {
 
+    private static final Logger logger = Logger.getInstance(DataSonnetEngine.class);
+
     private final VirtualFile mappingFile;
     private final Scenario scenario;
     private final Project project;
@@ -44,7 +43,12 @@ public class DataSonnetEngine {
     private DataSonnetDebugger dataSonnetDebugger;
 
 
-    public DataSonnetEngine(@NotNull Project project, @NotNull String scriptPath, @NotNull String scenario, @NotNull String outputMimeTypeName, boolean isDebug) {
+    public DataSonnetEngine(
+            @NotNull Project project,
+            @NotNull String scriptPath,
+            @NotNull String scenario,
+            @NotNull String outputMimeTypeName,
+            boolean isDebug) {
         this.project = project;
         this.outputMimeType = MediaType.valueOf(outputMimeTypeName);
         this.isDebug = isDebug;
@@ -56,7 +60,11 @@ public class DataSonnetEngine {
         }
     }
 
-    public DataSonnetEngine(@NotNull Project project, @NotNull VirtualFile mappingFile, @NotNull Scenario scenario, @NotNull MediaType outputMimeType) {
+    public DataSonnetEngine(
+            @NotNull Project project,
+            @NotNull VirtualFile mappingFile,
+            @NotNull Scenario scenario,
+            @NotNull MediaType outputMimeType) {
         this.project = project;
         this.scenario = scenario;
         this.outputMimeType = outputMimeType;
@@ -64,19 +72,9 @@ public class DataSonnetEngine {
         this.mappingFile = mappingFile;
     }
 
-    public com.datasonnet.document.Document runDataSonnetMapping() {
+    public com.datasonnet.document.Document<String> runDataSonnetMapping() {
         com.intellij.openapi.editor.Document document = ApplicationManager.getApplication().runReadAction((Computable<com.intellij.openapi.editor.Document>) () -> FileDocumentManager.getInstance().getDocument(mappingFile));
-        String mappingScript = document.getText();
-
-
-        // TODO: The camel functions should be added AFTER the header and maybe even imports.
-        // TODO: Add proper support for adding exchange headers and properties. Currently, it's just a placeholder which returns nothing.
-        // TODO: Add support for different mimetypes in the exchangeProperty function
-        String camelFunctions = "local cml = { exchangeProperty(str): exchangeProperty[str], header(str): header[str], properties(str): properties[str] };\n";
-        String dataSonnetScript = camelFunctions + mappingScript;
-
-
-
+        String dataSonnetScript = document.getText();
         String payload = "{}";
 
         Map<String, VirtualFile> inputFiles = scenario.getInputFiles();
@@ -99,7 +97,8 @@ public class DataSonnetEngine {
             }
         }
 
-        Map<String, String> libraries = ApplicationManager.getApplication().runReadAction((Computable<Map>) () -> getDSLibraries());
+        Map<String, String> libraries = ApplicationManager.getApplication().runReadAction(
+                (Computable<Map<String, String>>) this::getDSLibraries);
 
         try {
             ClassLoader currentCL = Thread.currentThread().getContextClassLoader();
@@ -109,13 +108,13 @@ public class DataSonnetEngine {
             MapperBuilder builder = new MapperBuilder(dataSonnetScript).withImports(libraries).withInputNames(variables.keySet());
 
             try {
-                for (Class clazz : scanLibraries()) {
-                    Library lib = null;
+                for (Class<?> clazz : scanLibraries()) {
+                    Library lib;
                     try { //First see if it's a static Scala class
                         lib = (Library) clazz.getDeclaredField("MODULE$").get(null);
-                    } catch (Exception e) { //See if it has defaut constructor
+                    } catch (Exception e) { //See if it has default constructor
                         try {
-                            Constructor constructor = clazz.getDeclaredConstructor();
+                            Constructor<?> constructor = clazz.getDeclaredConstructor();
                             lib = (Library) constructor.newInstance();
                         } catch (Exception e2) {
                             lib = null;
@@ -126,16 +125,16 @@ public class DataSonnetEngine {
                     }
                 }
             } catch (Exception e) {
-
+                logger.warn("Error loading DataSonnet libraries", e);
             }
 
             Mapper mapper = builder.build();
             if (isDebug) {
                 getDebugger().attach();
-                String[] lines = mappingScript.trim().split("\n|\r|\r\n");
+                String[] lines = dataSonnetScript.trim().split("\n|\r|\r\n");
                 getDebugger().setLineCount(lines.length);
             }
-            com.datasonnet.document.Document transformDoc = mapper.transform(new DefaultDocument<>(payload, payloadMimeType), variables, outputMimeType);
+            com.datasonnet.document.Document<String> transformDoc = mapper.transform(new DefaultDocument<>(payload, payloadMimeType), variables, outputMimeType);
             if (isDebug) {
                 getDebugger().detach();
             }
@@ -144,13 +143,13 @@ public class DataSonnetEngine {
 
             return transformDoc;
         } catch (Exception e) {
-            return new DefaultDocument(e.getMessage() != null ? e.getMessage() : e.toString(), MediaTypes.TEXT_PLAIN);
+            return new DefaultDocument<>(e.getMessage() != null ? e.getMessage() : e.toString(), MediaTypes.TEXT_PLAIN);
         }
     }
 
     @NotNull
     private Map<String, String> getDSLibraries() {
-        Map<String, String> libraries = new HashMap();
+        Map<String, String> libraries = new HashMap<>();
 
         //Search in all scopes of the project
         Collection<VirtualFile> libs = FilenameIndex.getAllFilesByExt(project, "libsonnet", GlobalSearchScope.allScope(project));
@@ -162,7 +161,7 @@ public class DataSonnetEngine {
                     path = path.substring(path.lastIndexOf("!") + 1);
                 } else {
                     com.intellij.openapi.module.Module module = ModuleUtil.findModuleForFile(mappingFile, project);
-                    List<VirtualFile> roots = new ArrayList(Arrays.asList(ModuleRootManager.getInstance(module).getSourceRoots()));
+                    List<VirtualFile> roots = new ArrayList<>(Arrays.asList(ModuleRootManager.getInstance(module).getSourceRoots()));
                     roots.addAll(Arrays.asList(ModuleRootManager.getInstance(module).getContentRoots()));
 
                     for (VirtualFile root : roots) {

@@ -544,7 +544,7 @@ public class DataSonnetEditor implements FileEditor {
 
             if (actionGroup == null) {
                 actionGroup = new DefaultActionGroup();
-                actionGroup.add(new AutoSyncAction(this));
+                actionGroup.add(new AutoRefreshAction(this));
                 actionGroup.add(new RefreshAction(this));
                 actionGroup.add(new SelectOutputMimeTypeAction());
             }
