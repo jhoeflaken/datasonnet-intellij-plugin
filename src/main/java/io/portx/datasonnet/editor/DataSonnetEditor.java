@@ -404,7 +404,7 @@ public class DataSonnetEditor implements FileEditor {
                 Document document = this.textEditor.getEditor().getDocument();
 
                 try {
-                    String errLine = preview.split("\n")[1];
+                    String errLine = preview.split("\n|\r|\r\n")[1];
                     String line = errLine.substring(errLine.indexOf("line"), errLine.indexOf("column"));
                     String column = errLine.substring(errLine.indexOf("column"));
 
