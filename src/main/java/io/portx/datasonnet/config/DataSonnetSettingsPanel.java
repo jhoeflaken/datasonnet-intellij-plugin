@@ -20,8 +20,6 @@ public class DataSonnetSettingsPanel {
     private JPanel mySearchPathPanel;
 
     private JPanel pnlTemplate;
-    private JPanel pnlAutoSync;
-    private JCheckBox chkAutoRefresh;
     private JTextArea txtTemplate;
 
     private DataSonnetProjectSettingsComponent projectSettings;
@@ -79,8 +77,7 @@ public class DataSonnetSettingsPanel {
             return false;
         }
 
-        return chkAutoRefresh.isSelected() != state.getAutoRefresh() ||
-                !Objects.equals(txtTemplate.getText(), state.getDefaultTemplate()) ||
+        return !Objects.equals(txtTemplate.getText(), state.getDefaultTemplate()) ||
                 !Objects.equals(pathsModel.getItems(), state.getDataSonnetLibraryPaths());
     }
 
@@ -90,7 +87,6 @@ public class DataSonnetSettingsPanel {
     public void apply() {
         final DataSonnetProjectSettings state = projectSettings.getState();
         if (state != null) {
-            state.setAutoRefresh(chkAutoRefresh.isSelected());
             state.setDefaultTemplate(txtTemplate.getText());
 
             final java.util.List<String> dataSonnetPaths = new ArrayList<>(pathsModel.getItems());
@@ -104,7 +100,6 @@ public class DataSonnetSettingsPanel {
     public void reset() {
         final DataSonnetProjectSettings state = projectSettings.getState();
         if (state != null) {
-            chkAutoRefresh.setSelected(state.getAutoRefresh());
             txtTemplate.setText(state.getDefaultTemplate());
             pathsModel.replaceAll(state.getDataSonnetLibraryPaths());
         }

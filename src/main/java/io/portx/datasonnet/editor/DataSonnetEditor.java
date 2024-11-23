@@ -45,6 +45,7 @@ import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.util.IconLoader;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.openapi.util.text.StringUtilRt;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDocumentManager;
@@ -495,7 +496,7 @@ public class DataSonnetEditor implements FileEditor {
                 app.runWriteAction(new Runnable() {
                     @Override
                     public void run() {
-                        currentEditor.getDocument().setText(contents);
+                        currentEditor.getDocument().setText(StringUtil.convertLineSeparators(contents));
                     }
                 });
             }

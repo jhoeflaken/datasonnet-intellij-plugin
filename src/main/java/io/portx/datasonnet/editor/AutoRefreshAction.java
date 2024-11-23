@@ -22,7 +22,7 @@ public class AutoRefreshAction extends ToggleAction {
         super("Auto Refresh", "Toggle Auto Refresh Mapping On/Off", autosyncIcon);
         this.editor = editor;
 
-        boolean autoRefresh = false;
+        boolean autoRefresh = true; // Default to true for backwards compatibility.
         final DataSonnetProjectSettings settings = DataSonnetProjectSettingsComponent.getSettings(editor.getProject());
         if (settings != null) {
             autoRefresh = settings.getAutoRefresh();
@@ -39,6 +39,12 @@ public class AutoRefreshAction extends ToggleAction {
     @Override
     public void setSelected(AnActionEvent anActionEvent, boolean b) {
         editor.setAutoSync(b);
+
+        // Save the setting
+        final DataSonnetProjectSettings settings = DataSonnetProjectSettingsComponent.getSettings(editor.getProject());
+        if (settings != null) {
+            settings.setAutoRefresh(b);
+        }
     }
 
     @Override
