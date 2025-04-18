@@ -14,8 +14,8 @@ public class DataSonnetProjectSettings implements Serializable {
      */
     private static final String DEFAULT_TEMPLATE = """
             /** DataSonnet
-            version=2.5
-            default null
+            version=3.0
+            default=null
             */
             
             {}

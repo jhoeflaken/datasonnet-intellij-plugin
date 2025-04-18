@@ -75,5 +75,5 @@ intellij {
 // }
 patchPluginXml {
     sinceBuild = "242"
-    untilBuild = "250.*"
+    untilBuild = "251.*"
 }
